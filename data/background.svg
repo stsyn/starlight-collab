@@ -1,0 +1,6 @@
+<svg fill="#002830" viewBox="0 0 1 1" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 0h1v1H0z"/>
+    <path transform="rotate(30, -1, 2)" d="m-1 2 3-3m-3 3 3-7m-3 7v-5" stroke-width=".3" stroke="#00303b">
+        <animateTransform attributeName="transform" type="rotate" from="0 -1 2" to="45 -1 2" dur="3s" repeatCount="indefinite"/>
+    </path>
+</svg>
