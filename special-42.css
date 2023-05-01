@@ -1,0 +1,12 @@
+body.special-42 .grid-image.container.stable-reveal.selected::before,
+body.special-42 .sidebar.revealed .thumb .container::before {
+  mask-image: url('data/42x.svg');
+  -webkit-mask-image: url('data/42x.svg');
+}
+
+body.special-42 .grid-image.container.stable-reveal.selected img,
+body.special-42 .sidebar .thumb .container img {
+  mask-image: url('data/42c.svg');
+  -webkit-mask-image: url('data/42c.svg');
+  padding: 1%;
+}

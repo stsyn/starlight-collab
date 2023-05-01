@@ -1,0 +1,32 @@
+body.special-39 .sidebar.revealed .thumb .container::after {
+  content: '';
+  position: absolute;
+  top: 5%;
+  left: 5%;
+  right: 5%;
+  bottom: 5%;
+  z-index: 1;
+
+  background: url('data/screen-view/39f.png');
+  padding: 5%;
+  mix-blend-mode: screen;
+  transition: background 1s;
+  animation: special-39-kek 2s infinite;
+
+  pointer-events: none;
+  background-size: contain;
+}
+
+@keyframes special-39-kek {
+  0% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: .7;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}

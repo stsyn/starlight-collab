@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta property="og:url" content="https://a.stsyn.art/">
+  <meta property="og:title" content="Choose your Starlight!">
+  <meta property="og:image" content="https://stsyn.art/starlight/data/meta.jpg">
+  <title>Choose your Starlight!</title>
+  <script src="lib/createElement.js"></script>
+  <script src="data/index.js"></script>
+  <script src="generic-components.js"></script>
+  <script src="components.js"></script>
+  <script src="sharing.js"></script>
+  <link href="style.css" type="text/css" rel="stylesheet">
+  <link href="special-19.css" type="text/css" rel="stylesheet">
+  <link href="special-34.css" type="text/css" rel="stylesheet">
+  <link href="special-39.css" type="text/css" rel="stylesheet">
+  <link href="special-41.css" type="text/css" rel="stylesheet">
+  <link href="special-42.css" type="text/css" rel="stylesheet">
+  <link href="mobile.css" type="text/css" rel="stylesheet" media="(max-aspect-ratio: 1/1)">
+</head>
+<body>
+<div id="background">
+  <svg viewBox="0 0 1 1" fill="#1b1820" stroke="#211b27" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 0h1v1H0z" stroke="none"/>
+    <path d="m-1 2 3-3m-3 3 3-7m-3 7v-5" stroke-width=".3">
+      <animateTransform attributeName="transform" type="rotate" from="0 -1 2" to="45 -1 2" dur="3s" repeatCount="indefinite"/>
+    </path>
+  </svg>
+</div>
+<div id="render"></div>
+<script>
+  function delay(time) {
+    return new Promise((resolve) => setTimeout(resolve, time));
+  }
+
+  function convertString(s) {
+    return s.replace(/[ .]/g, '_');
+  }
+
+  function awaitPicture(src) {
+    return new Promise((resolve => {
+      createElement('img', { src, onload: resolve });
+    }));
+  }
+</script>
+<script>
+  var randomCurrentIndex = 0;
+
+  function matesha(width, height, countToFit) {
+    const howLargeThumbCouldFitIfWeSplit = width * height / countToFit;
+    const dimension = Math.sqrt(howLargeThumbCouldFitIfWeSplit);
+    const verticalFit = Math.ceil(height / dimension);
+    const horizontalFit = Math.ceil(width / dimension);
+
+    const verticalSizeOnceAgain = Math.floor(height / verticalFit);
+    const horizontalSizeOnceAgain = Math.floor(width / horizontalFit);
+
+    let tested;
+    const max = Math.max(verticalSizeOnceAgain, horizontalSizeOnceAgain)
+    const min = Math.min(verticalSizeOnceAgain, horizontalSizeOnceAgain)
+    for (tested = min; tested <= max; tested++) {
+      const vfit = Math.floor(height / tested);
+      const hfit = Math.floor(width / tested);
+
+      if (vfit * hfit < countToFit) {
+        return [tested - 1, Math.floor(width / (tested - 1))];
+      }
+    }
+
+    return [max, Math.floor(width / max)];
+  }
+
+  async function exec() {
+    let onUnselect = null;
+    const render = document.getElementById('render');
+    const elements = {};
+    elements.bg = document.querySelector('#background svg');
+    let redrawGrid, redrawSidebar, redrawShare, selectedCell, ready, rowFit = 1;
+
+    var FitCellStyle = (props) => {
+      let redraw;
+
+      const style = (props2) => {
+        const [size, _rowFit] = matesha(elements.grid.offsetWidth - 1, elements.grid.offsetHeight -1, props.count);
+        rowFit = _rowFit;
+
+        return (
+          ['style', { ...props2 }, `.thumb { width: ${size}px; height: ${size}px } .grid { width: ${size * rowFit}px !important }`]
+        )
+      }
+
+      const reset = () => {
+        return ['style', ''];
+      }
+
+      window.addEventListener('resize', () => {
+        redraw([reset]);
+        redraw([style]);
+      });
+
+      props._update(() => {
+        redraw([reset]);
+        redraw([style]);
+      });
+
+      return [style, { _redraw: (e) => redraw = e, ...props }]
+    }
+
+    function onKeyDown(keycode) {
+      const currentCellIndex = Data.indexOf(selectedCell);
+      if (keycode === 'ArrowLeft') {
+        selectCell(Data[(currentCellIndex + Data.length - 1) % Data.length]);
+      } else if (keycode === 'ArrowRight') {
+        selectCell(Data[(currentCellIndex + 1) % Data.length]);
+      } else {
+        const maxGridSize = Math.ceil(Data.length / rowFit) * rowFit;
+        if (keycode === 'ArrowUp') {
+          const expected = (currentCellIndex + maxGridSize - rowFit) % maxGridSize;
+          if (expected >= Data.length) {
+            selectCell(Data[expected - rowFit]);
+          } else {
+            selectCell(Data[expected]);
+          }
+        } else if (keycode === 'ArrowDown') {
+          const expected = (currentCellIndex + rowFit) % maxGridSize;
+          if (expected >= Data.length) {
+            selectCell(Data[(expected + rowFit) % maxGridSize]);
+          } else {
+            selectCell(Data[expected]);
+          }
+        }
+      }
+    }
+
+    function setColorVariables(name, color, brightness, opacity) {
+      document.documentElement.style.setProperty(`--${name}`, `hsla(${color}%, ${brightness}%, ${opacity})`);
+    }
+
+    function setPreset(name, color, brightness) {
+      setColorVariables(name, color, brightness, 1);
+      setColorVariables(name + '0', color, brightness, 0);
+      setColorVariables(name + '2', color, brightness, .2);
+      setColorVariables(name + '5', color, brightness, .5);
+      setColorVariables(name + '3', color, brightness, .3);
+      setColorVariables(name + '7', color, brightness, .7);
+    }
+
+    let randomTimeout, largeThumbTweak, changeBg;
+    function selectCell(cell) {
+      if (!ready) {
+        return;
+      }
+
+      onUnselect && onUnselect();
+      onUnselect = null;
+
+      selectedCell.smallThumbElement.classList.remove('selected');
+      selectedCell = cell;
+      selectedCell.smallThumbElement.classList.add('selected');
+      selectedCell.smallThumbElement.scrollIntoView({ inline: 'center' });
+
+      elements.bg.style.fill = cell.bgFillColor || '';
+      elements.bg.style.stroke = cell.bgStrokeColor || '';
+      changeBg(['style', cell.bgStrokeColor ? `.share-content { background: ${cell.bgStrokeColor} }` : '']);
+      setPreset('p', cell.accent || '35, 100', (cell.accentBrightness || 1) * 66);
+      setPreset('a', cell.accent || '35, 100', (cell.accentBrightness || 1) * 80);
+
+      redrawSidebar([Sidebar, {
+        all: Data,
+        className: 'revealed',
+        _cast: (e) => elements.sidebar = e,
+        _redraw: (e) => redrawSidebar = e,
+        _largeThumbTweak: (e) => largeThumbTweak = e,
+        onLargeThumbClick,
+        onShareClick,
+        current: selectedCell
+      }]);
+
+      if (cell === RandomItem) {
+        drawRandom();
+        location.hash = '';
+      } else {
+        location.hash = convertString(selectedCell.artist);
+      }
+
+      document.body.classList.remove('special-19');
+      document.body.classList.remove('special-34');
+      document.body.classList.remove('special-39');
+      document.body.classList.remove('special-41');
+      document.body.classList.remove('special-42');
+      if (cell.artist === 'AlruMoon') {
+        AlruMoonRender();
+      } else if (cell.artist === 'mirage') {
+        mirageRender();
+      } else if (cell.artist === 'DACSY') {
+        DACSYRender();
+      } else if (cell.artist === 'MoiKoi') {
+        MoiKoiRender();
+      } else if (cell.artist === 'Vibrant Star') {
+        VibrantStarRender();
+      }
+    }
+
+    document.head.appendChild(createElement('style', { _redraw: (e) => changeBg = e }));
+
+    async function AlruMoonRender() {
+      await Promise.all([
+        awaitPicture('data/screen-view/19.png'),
+        awaitPicture('data/thumbs/19b.png'),
+        awaitPicture('data/screen-view/19b.png'),
+        await delay(Math.floor(2000 * Math.random()) + 600),
+      ])
+
+      if (selectedCell.artist !== 'AlruMoon') return;
+      document.body.classList.add('special-19');
+      largeThumbTweak([{
+        src: 'data/screen-view/19b.png',
+      }]);
+      document.querySelector('.grid .thumb .container.selected img').src = 'data/thumbs/19b.png';
+      onUnselect = () => document.querySelector('.grid .thumb .container.selected img').src = 'data/thumbs/19.png';
+
+      await delay(Math.floor(2000 * Math.random()) + 400);
+      if (selectedCell.artist !== 'AlruMoon') return;
+      document.body.classList.remove('special-19');
+      largeThumbTweak([{
+        src: 'data/screen-view/19.png',
+      }]);
+      document.querySelector('.grid .thumb .container.selected img').src = 'data/thumbs/19.png';
+      onUnselect = null;
+
+      AlruMoonRender().then();
+    }
+
+    async function mirageRender() {
+      document.body.classList.add('special-41');
+    }
+
+    async function DACSYRender() {
+      document.body.classList.add('special-34');
+    }
+
+    async function MoiKoiRender() {
+      document.body.classList.add('special-39');
+    }
+
+    async function VibrantStarRender() {
+      document.body.classList.add('special-42');
+    }
+
+    function drawRandom() {
+      clearTimeout(randomTimeout);
+
+      if (selectedCell === RandomItem) {
+        randomCurrentIndex++;
+        largeThumbTweak([{
+          src: Data[(randomCurrentIndex % (Data.length - 1)) + 1].largeThumbSrc,
+        }]);
+        randomTimeout = setTimeout(drawRandom, 100)
+      }
+    }
+
+    function onLargeThumbClick() {
+      if (selectedCell === RandomItem) {
+        selectCell(Data[(randomCurrentIndex % (Data.length - 1)) + 1]);
+      } else {
+        window.open(selectedCell.imageSrc);
+      }
+    }
+
+    function onShareClick() {
+      redrawShare([Share, {
+        cell: selectedCell,
+        onTwitterShareClick,
+        onVkShareClick,
+        onTelegramShareClick,
+        onFacebookShareClick,
+        onTumblrShareClick,
+        onOkShareClick,
+        onCopyClick,
+        onClose: onShareClose,
+      }]);
+    }
+
+    function onShareClose() {
+      redrawShare([Share]);
+    }
+
+    let progressBarTweak, progressBarValue = 0, copyright, title;
+    Data.unshift(RandomItem);
+    Data.forEach((v) => {
+      v.onSmallThumbLoadPromise = new Promise(resolve => v.onSmallThumbLoad = () => {
+        v.loaded = true;
+        progressBarValue = Math.round(Data.filter(d => d.loaded).length / Data.length * 100);
+        progressBarTweak([{ style: { width: progressBarValue + '%' } }]);
+        resolve();
+      });
+      v.order = Math.random();
+    });
+    Data[0].order = -1;
+    Data.sort((a, b) => a.order - b.order);
+
+    if (location.hash) {
+      selectedCell = Data.find(d => convertString(d.artist) === location.hash.substring(1));
+    } else {
+      selectedCell = RandomItem;
+    }
+
+    render.appendChild(
+      createElement('.layout', [
+        ['.title', { _cast: (e) => title = e }, 'Choose your Starlight!'],
+        [MainGrid, {
+          _cast: (e) => elements.grid = e,
+          _redraw: (e) => redrawGrid = e,
+          onscroll: () => document.body.classList.add('triggered'),
+          onclick: () => document.body.classList.add('triggered'),
+          all: [],
+        }],
+        [Sidebar, {
+          all: Data,
+          _cast: (e) => elements.sidebar = e,
+          _redraw: (e) => redrawSidebar = e,
+          _largeThumbTweak: (e) => largeThumbTweak = e,
+          onLargeThumbClick,
+          onShareClick,
+          current: selectedCell,
+        }],
+        ['.copyright', { _cast: (e) => copyright = e }, [
+          [Progressbar, { _tweak: (e) => progressBarTweak = e }],
+          ['span.content', [
+            'Collab organizer: ',
+            ['a', { href: 'https://twitter.com/Dodsies', target: '_blank' }, ['Dodsie']],
+            '. Coded by: ',
+            ['a', { href: 'https://stsyn.art/', target: '_blank' }, ['stsyn']],
+            '.',
+          ]]
+        ]],
+        [Share, { _redraw: (e) => redrawShare = e }],
+      ])
+    );
+
+    let recalcStyle;
+    document.head.appendChild(createElement(FitCellStyle, { count: Data.length, _update: (e) => recalcStyle = e }));
+
+    redrawGrid([MainGrid, {
+      _cast: (e) => elements.grid = e,
+      _redraw: (e) => redrawGrid = e,
+      all: Data,
+      withThumb: true,
+      onCellClick: selectCell,
+      onscroll: () => document.body.classList.add('triggered'),
+      onclick: () => document.body.classList.add('triggered'),
+    }]);
+
+    await Promise.all([...Data.map(v => v.onSmallThumbLoadPromise), delay(800)]);
+    await delay(200);
+
+    copyright.classList.add('loaded');
+    Data.forEach(d => d.smallThumbElement.classList.add('enabled'));
+    await delay(1000);
+
+    if (localStorage.loadedAtLeastOnce && (selectedCell && selectedCell !== RandomItem)) {
+      await Promise.all(
+        Data.map(v => delay(100).then(() => v.smallThumbElement.classList.add('revealed'))),
+      );
+    } else {
+      await Promise.all([
+        ...Data.map((v, i) => delay(100 * i).then(() => v.smallThumbElement.classList.add('revealed'))),
+        delay(100 * Data.length + 500)
+      ]);
+    }
+
+    document.body.classList.add('enabled');
+    await delay(200);
+    document.body.classList.add('full-layout');
+    recalcStyle();
+    Data.forEach(d => {
+      d.smallThumbElement.classList.add('stable-reveal');
+      d.smallThumbElement.classList.remove('revealed');
+    });
+    elements.sidebar.classList.add('revealed');
+    title.classList.add('ready');
+    copyright.classList.add('ready');
+    window.addEventListener('keydown', (e) => onKeyDown(e.code));
+    ready = true;
+    selectCell(selectedCell);
+
+    localStorage.loadedAtLeastOnce = 'true';
+  }
+
+  exec();
+</script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+body.special-19 .grid .thumb .container:not(.selected) img,
+body.special-19 .grid .thumb .container::before,
+body.special-19 #background,
+body.special-19 .title,
+body.special-19 .description,
+body.special-19 .copyright,
+body.special-19 .sidebar .thumb .container::before {
+  transition: .1s;
+  filter: brightness(.3);
+}
+
+body.special-19 img {
+  background: none !important;
+}
+
+body.special-19 .grid .thumb .container.selected img,
+body.special-19 .sidebar .thumb img {
+  animation: special-19-kek 3s infinite !important;
+}
+
+@keyframes special-19-kek {
+  0% {
+    filter: brightness(1);
+  }
+
+  14% {
+    filter: brightness(1);
+  }
+  15% {
+    filter: brightness(.8);
+  }
+  17% {
+    filter: brightness(1);
+  }
+  19% {
+    filter: brightness(.8);
+  }
+  20% {
+    filter: brightness(1);
+  }
+
+  32% {
+    filter: brightness(1);
+  }
+  33% {
+    filter: brightness(1.2);
+  }
+  39% {
+    filter: brightness(1.2);
+  }
+  40% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1);
+  }
+  51% {
+    filter: brightness(1.3);
+  }
+  58% {
+    filter: brightness(1.3);
+  }
+  59% {
+    filter: brightness(1);
+  }
+
+  77% {
+    filter: brightness(1);
+  }
+  79% {
+    filter: brightness(.8);
+  }
+  80% {
+    filter: brightness(1);
+  }
+}

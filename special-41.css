@@ -1,0 +1,4 @@
+body.special-41 .grid .thumb .container:not(.selected) img {
+  transition: .1s;
+  filter: brightness(.66);
+}

@@ -1,0 +1,12 @@
+body.special-34 .grid-image.container.stable-reveal.selected::before,
+body.special-34 .sidebar.revealed .thumb .container::before {
+  mask-image: url('data/34x.svg');
+  -webkit-mask-image: url('data/34x.svg');
+}
+
+body.special-34 .grid-image.container.stable-reveal.selected img,
+body.special-34 .sidebar .thumb .container img {
+  mask-image: url('data/34c.svg');
+  -webkit-mask-image: url('data/34c.svg');
+  padding: 6% 4% 2%;
+}
